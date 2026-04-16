@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>YouTube Multi Dashboard</title>
+  <title>Multi Video Screen</title>
   <style>
     body { margin:0; background:#000; color:#fff; font-family:Arial; }
 
@@ -12,15 +12,7 @@
       top:0;
     }
 
-    textarea {
-      width:100%;
-      height:80px;
-    }
-
-    button, select, input {
-      margin:5px;
-      padding:8px;
-    }
+    textarea { width:100%; height:80px; }
 
     #grid {
       display:grid;
@@ -30,18 +22,8 @@
 
     iframe {
       width:100%;
-      height:160px;
+      height:180px;
       border:none;
-    }
-
-    .card {
-      border:1px solid #333;
-      padding:5px;
-    }
-
-    .stats {
-      font-size:12px;
-      margin-top:3px;
     }
   </style>
 </head>
@@ -51,42 +33,37 @@
 <div id="controls">
   Grid:
   <select id="gridSize">
+    <option value="2">2×2</option>
+    <option value="3">3×3</option>
     <option value="4">4×4</option>
     <option value="5">5×5</option>
-    <option value="6" selected>6×6</option>
   </select>
 
-  <button onclick="loadVideos()">📥 Load</button>
-  <button onclick="randomizeVideos()">🔄 Change</button>
+  <button onclick="loadVideos()">Load</button>
 
-  Auto Change (sec):
-  <input type="number" id="intervalTime" value="60">
+  <br><br>
 
-  <br>
-
-  <textarea id="videoInput" placeholder="Paste YouTube links or IDs"></textarea>
+  <textarea id="videoInput" placeholder="Paste YouTube links (one per line)"></textarea>
 </div>
 
 <div id="grid"></div>
 
 <script>
 let videoList = [];
-let interval;
 
-function extractVideoID(url) {
+function getID(url) {
   let match = url.match(/(v=|\/)([0-9A-Za-z_-]{11})/);
-  return match ? match[2] : url;
+  return match ? match[2] : null;
 }
 
 function loadVideos() {
   const input = document.getElementById("videoInput").value;
 
   videoList = input.split("\n")
-    .map(v => extractVideoID(v.trim()))
+    .map(v => getID(v.trim()))
     .filter(v => v);
 
   createGrid();
-  startAuto();
 }
 
 function createGrid() {
@@ -96,33 +73,19 @@ function createGrid() {
   grid.innerHTML = "";
   grid.style.gridTemplateColumns = `repeat(${size},1fr)`;
 
-  videoList.forEach(id => {
-    const div = document.createElement("div");
-    div.className = "card";
+  let total = size * size;
 
-    div.innerHTML = `
-      <iframe src="https://www.youtube.com/embed/${id}?mute=1"></iframe>
-      <div class="stats">
-        <a href="https://www.youtube.com/watch?v=${id}" target="_blank">Open</a> |
-        <a href="https://wa.me/?text=https://youtube.com/watch?v=${id}" target="_blank">Share</a>
-      </div>
-    `;
+  for (let i = 0; i < total; i++) {
+    const id = videoList[i % videoList.length];
 
-    grid.appendChild(div);
-  });
-}
+    const iframe = document.createElement("iframe");
 
-function randomizeVideos() {
-  createGrid();
-}
+    iframe.src = `https://www.youtube.com/embed/${id}?mute=1&rel=0`;
 
-function startAuto() {
-  clearInterval(interval);
-  const sec = document.getElementById("intervalTime").value * 1000;
+    iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
 
-  interval = setInterval(() => {
-    randomizeVideos();
-  }, sec);
+    grid.appendChild(iframe);
+  }
 }
 </script>
 
