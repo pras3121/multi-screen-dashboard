@@ -2,81 +2,153 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced YouTube Traffic Dashboard</title>
+    <title>Super YouTube Multi-Screen Booster</title>
     <style>
-        body { margin: 0; background: #050505; color: #fff; font-family: 'Segoe UI', sans-serif; }
-        #header { padding: 15px; background: #111; border-bottom: 2px solid #f00; display: flex; flex-wrap: wrap; gap: 10px; }
-        textarea { width: 100%; height: 50px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 8px; }
-        button { background: #f00; color: #fff; border: none; padding: 10px 25px; cursor: pointer; border-radius: 5px; font-weight: bold; }
-        #grid { display: grid; gap: 10px; padding: 10px; }
-        .vid-box { position: relative; padding-top: 56.25%; background: #000; box-shadow: 0 0 10px rgba(255,0,0,0.1); }
+        body { margin: 0; background: #050505; color: #fff; font-family: 'Segoe UI', sans-serif; box-sizing: border-box; }
+        #header { padding: 20px; background: linear-gradient(#111, #000); border-bottom: 3px solid #f00; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        textarea { width: 100%; max-width: 400px; height: 60px; background: #1a1a1a; color: #0f0; border: 1px solid #333; padding: 10px; border-radius: 5px; }
+        select, input { background: #222; color: #fff; border: 1px solid #444; padding: 10px; border-radius: 5px; }
+        input[type=number] { width: 70px; }
+        button { background: #f00; color: #fff; border: none; padding: 12px 30px; cursor: pointer; border-radius: 8px; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #cc0000; }
+        #controls { display: flex; gap: 10px; }
+        #grid { display: grid; gap: 12px; padding: 20px; }
+        .vid-box { position: relative; padding-top: 56.25%; background: #000; box-shadow: 0 0 15px rgba(255,0,0,0.2); border-radius: 8px; overflow: hidden; }
         iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
-        .status-bar { font-size: 12px; color: #888; margin-top: 5px; }
+        .status-bar { font-size: 14px; margin-left: auto; }
+        #viewCounter { background: #00f; padding: 10px 20px; border-radius: 20px; font-size: 18px; font-weight: bold; }
+        #progress { width: 200px; height: 5px; background: #333; border-radius: 3px; overflow: hidden; }
+        #progressBar { height: 100%; background: #f00; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <textarea id="vLinks" placeholder="Paste YouTube Links here..."></textarea>
+    <textarea id="vLinks" placeholder="Multiple YouTube Links paste karein (ek line mein ek)..."></textarea>
     <select id="gSize">
-        <option value="2">Low Traffic (2x2)</option>
-        <option value="3">Medium Traffic (3x3)</option>
-        <option value="4" selected>High Traffic (4x4)</option>
+        <option value="3">Medium (3x3)</option>
+        <option value="4" selected>High (4x4)</option>
+        <option value="5">Super (5x5)</option>
+        <option value="6">Ultra (6x6)</option>
     </select>
-    <input type="number" id="minTime" value="45" title="Seconds" style="width:60px; background:#222; color:#fff; border:1px solid #444;">
-    <button onclick="startTraffic()">🔥 Start Boosting</button>
-    <div class="status-bar" id="stat">Taiyaar...</div>
+    <input type="number" id="minTime" value="60" min="30" title="Minimum seconds between refresh" />
+    <button onclick="startTraffic()">🚀 Super Boost Start</button>
+    <div id="controls">
+        <button onclick="pauseAll()">⏸️ Pause</button>
+        <button onclick="stopAll()">⏹️ Stop All</button>
+    </div>
+    <div class="status-bar">
+        Views: <span id="viewCounter">0</span> | <div id="progress"><div id="progressBar"></div></div>
+        <span id="stat">Taiyaar...</span>
+    </div>
 </div>
 
 <div id="grid"></div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
     let vList = [];
-    
+    let players = [];
+    let isRunning = false;
+    let viewCount = 0;
+    let refreshInterval;
+
+    function onYouTubeIframeAPIReady() {
+        console.log('YouTube API Ready');
+    }
+
     function startTraffic() {
-        const input = document.getElementById("vLinks").value;
-        vList = input.split("\n").map(l => {
-            const m = l.match(/(?:v=|be\/|embed\/)([^#&?]*)/);
-            return m ? m[1] : (l.length === 11 ? l : null);
-        }).filter(id => id);
+        const input = document.getElementById("vLinks").value.trim();
+        vList = input.split("
+")
+            .map(l => l.trim())
+            .map(l => {
+                const m = l.match(/(?:v=|/(?:shorts/|be/|embed/|v/))([^#&?]{11})/);
+                const id = m ? m[1] : (l.length === 11 ? l : null);
+                if (id && id.length === 11 && /^[a-zA-Z0-9_-]+$/.test(id)) return id;
+                return null;
+            })
+            .filter(Boolean);
 
-        if(!vList.length) return alert("Sahi Link Dalein!");
+        if (!vList.length) return alert("Sahi YouTube links dalein!");
 
-        const size = document.getElementById("gSize").value;
+        const size = parseInt(document.getElementById("gSize").value);
         const grid = document.getElementById("grid");
         grid.innerHTML = "";
         grid.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        players = [];
 
-        for(let i=0; i < (size*size); i++) {
+        for (let i = 0; i < (size * size); i++) {
             const div = document.createElement("div");
             div.className = "vid-box";
             div.id = "s-" + i;
             grid.appendChild(div);
+        }
+
+        isRunning = true;
+        viewCount = 0;
+        updateCounter();
+        launchAllVideos();
+        document.getElementById("stat").innerText = `${size}x${size} screens active | ${vList.length} videos`;
+    }
+
+    function launchAllVideos() {
+        const size = parseInt(document.getElementById("gSize").value);
+        for (let i = 0; i < (size * size); i++) {
             launchVideo(i);
         }
     }
 
     function launchVideo(index) {
+        if (!isRunning) return;
         const box = document.getElementById("s-" + index);
-        const vidID = vList[Math.floor(Math.random() * vList.length)];
-        
-        // Random behavior parameters
-        const start = Math.floor(Math.random() * 60); // Randomly starts within first minute
-        const rand = Math.random().toString(36).substring(7); // Cache busting string
-        
-        const iframe = document.createElement("iframe");
-        // 'origin' and 'enablejsapi' helps in making the request look legit
-        iframe.src = `https://www.youtube.com/embed/${vidID}?autoplay=1&mute=1&playlist=${vidID}&loop=1&start=${start}&enablejsapi=1&rel=0&iv_load_policy=3&vq=tiny&_cb=${rand}`;
-        iframe.allow = "autoplay; encrypted-media";
-        
-        box.innerHTML = "";
-        box.appendChild(iframe);
+        if (!box || !vList.length) return;
 
-        // Natural dynamic refreshing (Not fixed)
-        const time = (parseInt(document.getElementById("minTime").value) * 1000) + (Math.random() * 15000);
-        setTimeout(() => launchVideo(index), time);
-        
-        document.getElementById("stat").innerText = "Running... Refreshing in random intervals.";
+        const vidID = vList[Math.floor(Math.random() * vList.length)];
+        const start = Math.floor(Math.random() * 90) + 30; // Longer random start
+        const rand = Math.random().toString(36).substring(7);
+
+        players[index] = new YT.Player(`s-${index}`, {
+            height: '100%',
+            width: '100%',
+            videoId: vidID,
+            playerVars: {
+                'autoplay': 1,
+                'mute': 1,
+                'loop': 1,
+                'playlist': vidID,
+                'start': start,
+                'rel': 0,
+                'iv_load_policy': 3,
+                'vq': 'small',
+                'origin': window.location.origin
+            },
+            events: {
+                'onReady': function(event) {
+                    viewCount += Math.floor(Math.random() * 10) + 1;
+                    updateCounter();
+                }
+            }
+        });
+
+        const minTime = Math.max(60000, parseInt(document.getElementById("minTime").value) * 1000);
+        setTimeout(() => launchVideo(index), minTime + (Math.random() * 30000));
+    }
+
+    function updateCounter() {
+        document.getElementById("viewCounter").innerText = viewCount.toLocaleString();
+        const progress = (viewCount % 100) / 100 * 100;
+        document.getElementById("progressBar").style.width = progress + '%';
+    }
+
+    function pauseAll() {
+        players.forEach(player => { if (player.pauseVideo) player.pauseVideo(); });
+    }
+
+    function stopAll() {
+        isRunning = false;
+        players.forEach(player => { if (player.stopVideo) player.stopVideo(); });
+        document.getElementById("stat").innerText = 'Stopped';
     }
 </script>
 </body>
